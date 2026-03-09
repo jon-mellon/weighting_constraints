@@ -1,0 +1,81 @@
+---
+title: "Why is this the answer?"
+author: "Jonathan Mellon"
+date: 2021-12-13T21:13:14-05:00
+categories:
+- post-stratification
+- response rate
+- surveys
+- weighting
+- raking
+- stream of consciousness
+tags:
+- post-stratification
+- response rate
+- surveys
+- weighting
+- raking
+- stream of consciousness
+math: yes
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+
+<p>In my <a href="https://www.filedrawer.blog/post/minimum-post-strat-weight-is-response-rate/">previous post</a> I showed that the minimum inverse-probability weight in a simple random sample should be equal to the response rate of the survey. However, since simple random samples are basically non-existent in the real world, I need to work out the equivalent constraint for complex survey designs.</p>
+<p>This post summarizes my progress so far towards doing that.</p>
+<p>In the previous post I speculated that the constraint for <span class="math inline">\(i\)</span>’s weight should be:</p>
+<p><span class="math display">\[
+\frac{FinalWeight_i}{SelectionWeight_i} &gt;= RR_{total}
+\]</span></p>
+<p>tl;dr that constraint is close but not exactly correct. I think I have now identified the correct constraint, but I haven’t yet proved it.</p>
+<div id="does-it-work-in-practice" class="section level1">
+<h1>Does it work in practice?</h1>
+<p>After an hour of failing to work out an analytic proof, I thought it would be worth doing a simulation to see whether the claim is at least empirically true.</p>
+<p>Let’s do a simple two-stage sample where households are randomly selected, then a respondent is randomly selected from that household. This means that people in larger households have a lower probability of selection. If you live alone there’s a 100% chance of selection conditional on your household being selected, whereas if you live in a two-person household your selection probability is 50%.</p>
+<p>Conditional on being selected for the survey, rich people respond at 100% and poor people respond at 30%.</p>
+<p>So after simulating that, I look at the response rate for the simulation (0.649) and the minimum value of the ratios of the final true weight to the selection weight (0.65). Not far off, but also not identical. So, it looks like my initial guess about the constraint might be on the right track but not exactly right.</p>
+<p>Let’s try this a few more times and see whether it’s robust.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>After 100 simulations, it’s clear that there’s a very strong relationship, but this not an exact match.</p>
+<p>So what’s going on with those ratios? The mean of the scaled inverse-probability weights is always exactly 1 in the simulation as is the mean of the scaled selection weights.</p>
+<p>However, the ratios themselves do not always have a mean of exactly one. In fact, on average, they are 0.0109 away from 1. But should we actually expect these ratios to be near one on average? If I simulate two random vectors and rescale them to both have a mean of 1, the average ratio of them isn’t usually anywhere near 1.</p>
+<pre class="r"><code>set.seed(1298)
+A &lt;- abs(rnorm(1000))
+B &lt;- abs(rnorm(1000))
+A &lt;- A / mean(A)
+B &lt;- B / mean(B)
+mean(A/B)</code></pre>
+<pre><code>## [1] 4.292947</code></pre>
+<p>OK, well what if I rescale the ratios so that they <em>actually</em> have a mean of 1 rather than just being close to that?</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>Apparently, that nails the minimum weight exactly. The mean absolute difference between this adjusted ratio and the response rate for the survey is just 0.0000000000000000621724893790088. At that point I’m willing to believe any remaining differences are just about floating point precision.</p>
+</div>
+<div id="does-this-work-with-different-simulation-parameters" class="section level1">
+<h1>Does this work with different simulation parameters?</h1>
+<p>First of all, let’s make sure this actually holds up in a more complex simulation. I’ll set the poor response rate to 40% and say that people in bigger households are more likely to be rich (so that we have a correlation between selection probability and group response rates).</p>
+<p>Apparently everything still works and the minimum of the adjusted ratios exactly matches the response rate.</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>What about if I make the population 10 times larger?</p>
+<p>Apparently this still works too:</p>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+</div>
+<div id="summarizing-the-claim" class="section level1">
+<h1>Summarizing the claim</h1>
+<p>So to formalize, the constraint is as follows. For each respondent, <span class="math inline">\(j\)</span>, define:</p>
+<p><span class="math display">\[
+r_j = \frac{FinalWeight_j}{SelectionWeight_j}
+\]</span></p>
+<p>The adjusted ratio is defined as follows, where <span class="math inline">\(\bar{r}\)</span> is the mean ratio across all respondents to the survey:</p>
+<p><span class="math display">\[
+r^{*}_j = \frac{r_j}{\bar{r}}
+\]</span>
+Based on my simulations, it appears that:</p>
+<p><span class="math display">\[
+r^{*}_{j}&gt;= RR_{total}
+\]</span></p>
+</div>
+<div id="but-why-does-this-work" class="section level1">
+<h1>But why does this work?</h1>
+<p>🤷</p>
+</div>

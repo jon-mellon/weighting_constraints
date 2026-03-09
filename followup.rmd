@@ -1,0 +1,127 @@
+---
+title: "Follow-up: Why the constraint works"
+author: "Jonathan Mellon"
+date: 2026-03-09
+math: true
+---
+
+This note follows up on:
+
+1. `minimum-post-strat-weight-is-response-rate/index.Rmd`
+2. `why-is-this-the-answer/index.Rmd`
+
+The short answer is: the constraint works because the response-adjustment factor is algebraically tied to a response probability, and probabilities cannot exceed 1. The only subtlety is that separate normalization of different weight vectors adds a constant, which must be removed.
+
+## Setup
+
+For person \(i\):
+
+- \(\pi_i\): selection probability from the sample design
+- \(\rho_i\): response probability, conditional on being selected
+- \(d_i = 1/\pi_i\): design (selection) weight
+- \(w_i = 1/(\pi_i \rho_i)\): full inverse-probability weight
+
+So:
+
+$$
+w_i = d_i \cdot \frac{1}{\rho_i}
+$$
+
+and the raw response-adjustment ratio is
+
+$$
+u_i \equiv \frac{w_i}{d_i} = \frac{1}{\rho_i}.
+$$
+
+## Why the minimum is tied to the total response rate
+
+Let \(RR_{total}\) be the overall response rate among sampled units.
+
+At the group level, with selected-sample share \(q_g\) and group response rate \(\rho_g\):
+
+$$
+RR_{total} = \sum_g q_g \rho_g.
+$$
+
+Respondent share in group \(g\) is:
+
+$$
+r_g = \frac{q_g \rho_g}{RR_{total}}.
+$$
+
+Now average \(1/\rho\) across respondents:
+
+$$
+\overline{\left(\frac{1}{\rho}\right)}_R
+= \sum_g r_g \frac{1}{\rho_g}
+= \sum_g \frac{q_g \rho_g}{RR_{total}} \cdot \frac{1}{\rho_g}
+= \frac{1}{RR_{total}}.
+$$
+
+So the respondent-normalized response factor is
+
+$$
+u_i^* \equiv \frac{u_i}{\bar u_R}
+= \frac{(1/\rho_i)}{\overline{(1/\rho)}_R}
+= \frac{RR_{total}}{\rho_i}.
+$$
+
+Because \(\rho_i \le 1\), we must have:
+
+$$
+u_i^* \ge RR_{total}.
+$$
+
+Equality holds when \(\rho_i = 1\). If no group has \(\rho=1\), the true minimum is strictly larger than \(RR_{total}\).
+
+This is exactly the mechanism in the first post (simple random sampling is the special case where \(d_i\) is constant).
+
+## Why the second post saw an "almost" match first
+
+In the second post, ratios were formed from separately scaled weights:
+
+$$
+r_i = \frac{w_i/\bar w_R}{d_i/\bar d_R}
+= \frac{1}{\rho_i}\cdot\frac{\bar d_R}{\bar w_R}.
+$$
+
+That extra constant \(\bar d_R/\bar w_R\) is unrelated to \(i\), but it shifts every ratio. So \(r_i\) is proportional to \(1/\rho_i\), not equal to it.
+
+Dividing by the mean ratio removes that constant:
+
+$$
+r_i^* = \frac{r_i}{\bar r_R}
+= \frac{(1/\rho_i)}{\overline{(1/\rho)}_R}
+= \frac{RR_{total}}{\rho_i}
+\ge RR_{total}.
+$$
+
+So the "adjusted ratio" in the simulation works because it reconstructs the respondent-normalized response factor.
+
+## Practical interpretation for weighting constraints
+
+If your final weights are \(w_i = d_i g_i\), then \(g_i\) is the response adjustment (possibly mixed with calibration factors). Under the model above, the respondent-normalized response component satisfies:
+
+$$
+g_i^* \ge RR_{total}.
+$$
+
+Equivalent statement:
+
+$$
+g_i^* < RR_{total}
+\quad\Longrightarrow\quad
+\text{implied } \rho_i > 1 \text{ (impossible).}
+$$
+
+That is why the bound is informative: it excludes weight solutions that imply impossible response behavior.
+
+## Caveats
+
+- This is exact for true inverse-probability weights under a probability sample.
+- In practice, raking/calibration are approximations using limited margins; the bound is still a logical constraint, but not a guarantee of full identification.
+- Empty cells and model misspecification can still dominate error.
+
+## Bottom line
+
+The constraint works because normalized response adjustments are \(RR_{total}/\rho_i\), and \(\rho_i\) cannot exceed 1. The key fix in complex designs is to remove normalization constants before applying the bound.
